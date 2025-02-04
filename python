@@ -1,1 +1,187 @@
+from flask import Flask, render_template_string, request, redirect, url_for
+from colorama import Fore, Style, init
+import random
 
+app = Flask(__name__)
+
+# Initialize colorama for Windows support
+init(autoreset=True)
+
+# Dictionary storing cooking techniques (same as before)
+cooking_techniques = {
+    "Simmer": {
+        "description": "Cooking gently in liquid below boiling, with small bubbles forming.",
+        "fun_fact": "Simmering is commonly used for soups and sauces to develop deep flavors!"
+    },
+    "Steam": {
+        "description": "Cooking with steam from boiling water, typically using a steamer basket.",
+        "fun_fact": "Steaming helps retain more nutrients in vegetables compared to boiling."
+    },
+    "Braise": {
+        "description": "Searing food at high heat, then simmering it in liquid at lower heat.",
+        "fun_fact": "Braising is a great way to tenderize tough cuts of meat!"
+    },
+    "Poach": {
+        "description": "Cooking food gently in simmering liquid at a low temperature.",
+        "fun_fact": "Poaching is the secret behind perfectly cooked eggs in Eggs Benedict!"
+    },
+    "Boil": {
+        "description": "Cooking in liquid at a high temperature with large, rapid bubbles.",
+        "fun_fact": "Boiling water at higher altitudes takes longer due to lower air pressure."
+    },
+    "Stew": {
+        "description": "Slow cooking in a covered pot with liquid to tenderize meat and deepen flavors.",
+        "fun_fact": "Stews are one of the oldest cooking methods, dating back to ancient times!"
+    },
+    "Blanch": {
+        "description": "Boiling briefly and then plunging into ice water to stop cooking.",
+        "fun_fact": "Blanching is often used to preserve the color and texture of vegetables before freezing."
+    },
+    "Bake": {
+        "description": "Cooking with dry heat in an oven, often for bread, cakes, and casseroles.",
+        "fun_fact": "Baking powder creates carbon dioxide gas, making baked goods rise!"
+    },
+    "Roast": {
+        "description": "Cooking with dry heat in an oven or over a fire, browning the exterior.",
+        "fun_fact": "Roasting caramelizes natural sugars, making food more flavorful."
+    },
+    "Grill": {
+        "description": "Cooking over direct heat from a flame or coals on a grill grate.",
+        "fun_fact": "Grilling meat over an open flame adds a smoky flavor loved worldwide!"
+    },
+    "Broil": {
+        "description": "Cooking with high heat from above, typically in an oven’s broiler.",
+        "fun_fact": "Broiling is a quick way to get a crispy, caramelized topping on foods!"
+    },
+    "Saute": {
+        "description": "Cooking quickly in a small amount of oil or fat over medium-high heat.",
+        "fun_fact": "The word ‘sauté’ comes from the French word ‘sauter,’ meaning ‘to jump’!"
+    },
+    "Deep Fry": {
+        "description": "Submerging food completely in hot oil, creating a crispy texture.",
+        "fun_fact": "Deep frying creates the famous crispy texture in French fries and tempura!"
+    },
+    "Stir Fry": {
+        "description": "Cooking quickly over high heat while stirring, often in a wok.",
+        "fun_fact": "Stir-frying originates from China and is great for quick, healthy meals!"
+    }
+}
+
+score = 0
+
+HTML_TEMPLATE = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cooking Techniques Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .menu { text-align: center; margin: 20px 0; }
+        .button { 
+            display: inline-block; 
+            padding: 10px 20px; 
+            margin: 5px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .quiz-option {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            text-align: left;
+        }
+        .message { color: #4CAF50; margin: 10px 0; }
+        .error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">🔥 Cooking Techniques Game! Mrs Zimmerman 🔥</h1>
+
+    {% if message %}
+    <div class="message">{{ message }}</div>
+    {% endif %}
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <div class="menu">
+        <a href="/" class="button">Home</a>
+        <a href="/learn" class="button">Learn Techniques</a>
+        <a href="/quiz" class="button">Take Quiz</a>
+    </div>
+
+    {{ content|safe }}
+
+    <div style="text-align: center; margin-top: 20px;">
+        Current Score: {{ score }}
+    </div>
+</body>
+</html>
+'''
+
+@app.route('/')
+def home():
+    content = '''
+    <div style="text-align: center;">
+        <h2>Welcome to the Cooking Techniques Game!</h2>
+        <p>Choose an option from the menu above to get started.</p>
+    </div>
+    '''
+    return render_template_string(HTML_TEMPLATE, content=content, score=score)
+
+@app.route('/learn')
+def learn():
+    techniques_list = '<div style="text-align: left;">'
+    for technique, details in cooking_techniques.items():
+        techniques_list += f'''
+        <h3>{technique}</h3>
+        <p>{details["description"]}</p>
+        <p><strong>Fun Fact:</strong> {details["fun_fact"]}</p>
+        '''
+    techniques_list += '</div>'
+    return render_template_string(HTML_TEMPLATE, content=techniques_list, score=score)
+
+@app.route('/quiz')
+def quiz():
+    global score
+    technique, details = random.choice(list(cooking_techniques.items()))
+    correct_answer = technique
+    wrong_answers = random.sample([key for key in cooking_techniques.keys() if key != technique], 3)
+    options = wrong_answers + [correct_answer]
+    random.shuffle(options)
+
+    content = f'''
+    <div style="text-align: left;">
+        <h2>Quiz Question</h2>
+        <p>Which cooking technique is described below?</p>
+        <p><em>{details["description"]}</em></p>
+        <form action="/check_answer" method="post">
+            <input type="hidden" name="correct_answer" value="{correct_answer}">
+            {''.join(f'<button class="quiz-option button" name="answer" value="{option}">{option}</button>' for option in options)}
+        </form>
+    </div>
+    '''
+    return render_template_string(HTML_TEMPLATE, content=content, score=score)
+
+@app.route('/check_answer', methods=['POST'])
+def check_answer():
+    global score
+    user_answer = request.form.get('answer')
+    correct_answer = request.form.get('correct_answer')
+
+    if user_answer == correct_answer:
+        score += 1
+        message = "✅ Correct! Great job!"
+    else:
+        message = f"❌ womp womp your wrong The correct answer was: {correct_answer}"
+
+    return render_template_string(HTML_TEMPLATE, 
+                                content=f'<div style="text-align: center;"><h2>{message}</h2><a href="/quiz" class="button">Next Question</a></div>',
+                                score=score)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=3000)
